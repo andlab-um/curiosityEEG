@@ -4,7 +4,7 @@
 
 > From [Affective, Neuroscience, and Decision-making Lab](https://andlab-um.com)
 
-Code for [[EEG study of curiosity] ](https://openneuro.org/datasets/ds003766) preprocessing and preliminary analysis, accompanying with the following preprint:
+Code for [[EEG study of curiosity] ] preprocessing and preliminary analysis, accompanying with the following preprint:
 
 
 ## Description
