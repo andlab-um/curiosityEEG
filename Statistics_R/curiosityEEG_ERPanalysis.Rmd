@@ -1,0 +1,1245 @@
+---
+title: "curiosityEEG_ERPanalysis"
+author: "Xianqing"
+date: "8/24/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(sampling) 
+```
+
+# 301 by curiosity
+
+```{r}
+## 301: txt -> csv
+# eegevent
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E\\event"))
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}  
+  
+# eegdata
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E"))
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}
+
+# 500 txt -> csv
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\500_21E\\event"))
+
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}  
+
+# eegdata
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\500_21E"))
+
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}
+
+# surprise
+# eegevent
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_surprise\\export_eegdata\\500_21E\\event"))
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}  
+
+# eegdata
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_surprise\\export_eegdata\\500_21E"))
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}
+```
+
+## 301: 数据整理，添加被试编号和curiosity level
+```{r}
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E"))
+  
+filelist.data <- list.files(pattern = ".csv")
+filelist.event <- list.files(".\\event", pattern = ".csv")
+
+  
+for (i in 1:length(filelist.data)){
+  eegdata <- read.csv(filelist.data[i])
+    
+  # read event
+  eegevent <- read.csv(paste0(".\\event\\", filelist.event[i])) %>% 
+    filter(binlabel != "") %>% 
+    select(type, epoch)
+  
+  list.condition <- list()
+  list.trial <- list()
+  
+  # eegevent$type -> list.condition
+  # eegevent$epoch -> list.trial
+  for (j in 1:length(eegevent$type)){
+    for (x in 1:256){
+      list.condition <- append(list.condition, eegevent[j,1])
+      list.trial <- append(list.trial, eegevent[j,2])
+    }
+  }
+  
+  # add columns (sub, condition, trial)
+  isub = substr(filelist.data[i], start=4, stop=6)
+  eegdata <- eegdata %>% 
+    # filter(Time>=250 & Time<=325) %>% 
+    mutate(
+      sub = isub,
+      condition = as.character(list.condition),
+      trial = as.character(list.trial)
+    )
+  write.csv(eegdata, paste0(".\\eegdata\\tc_", isub, "_peak301_18E.csv"))
+}
+
+# 301 拼接所有被试数据
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E\\eegdata"))
+peakfile <- list.files()
+peakfile <- peakfile %>% lapply(read.csv)%>% bind_rows
+
+summary(peakfile)
+write.csv(peakfile, paste0("tc_301_byCuriosity.csv"))
+
+```
+
+
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E\\eegdata")
+p3_301 <- read.csv("tc_301_byCuriosity.csv")
+p3_301 <- p3_301[, 3:7]
+p3_301 <- filter(p3_301, condition != "B7(301)")
+p3_301$condition <- factor(p3_301$condition, levels=c("B1(7301)","B2(7302)","B3(7303)","B4(7304)","B5(7305)","B6(7306)"))
+p3_301 <- p3_301 %>%
+  mutate(curiosity = ifelse(condition=="B1(7301)"|condition=="B2(7302)"|condition=="B3(7303)", "low", "high"))
+p3_301$curiosity <- factor(p3_301$curiosity, levels=c("high","low"))
+summary(p3_301)
+
+# curiosity <- p3_301
+# curiosity <- curiosity[, 3:6] %>% 
+#   group_by(sub, trial, curiosity) %>%
+#   summarise(sub = mean(sub)) 
+# 
+# curiosity_count <- curiosity %>% 
+#   mutate(x = 1) %>% group_by(sub, curiosity) %>% 
+#   summarise(count = sum(x)) %>% 
+#   pivot_wider(names_from = curiosity, values_from = count)
+# 
+# sampling <- c()
+# for (i in 1:47){
+#   if (curiosity_count$low[i] < curiosity_count$high[i]){
+#     sample_list <- srswor(curiosity_count$low[i], curiosity_count$high[i])
+#   }
+#   if (curiosity_count$high[i] < curiosity_count$low[i]){
+#     sample_list <- srswor(curiosity_count$high[i], curiosity_count$low[i])
+#   }
+#   sampling <- c(sampling, sample_list)
+# }
+# 
+# sub.more_high <- curiosity_count$sub[curiosity_count$low < curiosity_count$high]
+# sub.more_low <- curiosity_count$sub[curiosity_count$low > curiosity_count$high]
+# 
+# curiosity <- curiosity %>% 
+#   filter((curiosity == "high" & sub %in% sub.more_high)|(curiosity == "low" & sub %in% sub.more_low)) 
+# curiosity$sampling <- sampling
+# 
+# p3_301 <- left_join(p3_301, curiosity)
+# p3_301$sampling <- factor(p3_301$sampling)
+# summary(p3_301)
+# 
+# p3_301 <- filter(p3_301, sampling == 1 | is.na(sampling) == 1)
+# summary(p3_301)
+# find peaked timepoint
+df_301 <- p3_301 %>% group_by(Time,curiosity) %>% summarise(mean = mean(averagechannel)) 
+
+# plot：2 curiosity levels，ERP
+df_301 %>% ggplot(aes(x=Time, y=mean, color=curiosity))+
+  # annotate("rect", xmin=277.344, xmax=324.219, ymin=-.8, ymax=.75, fill="black")+
+  # annotate("rect", xmin=171.875, xmax=207.031, ymin=-.8, ymax=.75, fill="black")+
+  stat_summary(geom="line", size=1.7)+
+  # geom_ribbon(aes(ymin=mean-sd(mean), ymax=mean+sd(mean)), fill="#FAEEF3", alpha=.2)+
+  scale_color_manual(values=c("#B39DDB","#311B92"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylab("amplitude")+theme_classic()
+```
+
+
+
+## plot the 301 data & ERP by curiosity divided by mean
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\301_18E\\eegdata")
+p3_301 <- read.csv("tc_301_byCuriosity.csv")
+p3_301 <- p3_301[, 3:7]
+p3_301 <- filter(p3_301, condition != "B7(301)")
+p3_301$condition <- factor(p3_301$condition, levels=c("B1(7301)","B2(7302)","B3(7303)","B4(7304)","B5(7305)","B6(7306)"))
+summary(p3_301)
+
+# divide curiosity level
+
+p3_301 <- p3_301 %>% mutate(curating = as.numeric(substr(condition,7,7)))
+summary(p3_301)
+curiosity_smy <- p3_301 %>% group_by(sub) %>% 
+  summarise(
+    mean_curating = mean(curating),
+    median_curating = median(curating)
+  )
+
+p3_301 <- left_join(p3_301, curiosity_smy)
+p3_301 <- p3_301 %>% mutate(curiosity = ifelse(curating > mean_curating, "high", "low"))
+# p3_301 <- p3_301 %>% mutate(curiosity = ifelse(curating > median_curating, "high", "low"))
+# p3_301 <- p3_301 %>% mutate(curiosity = ifelse(curating >= median_curating, "high", "low"))
+p3_301$curiosity <- factor(p3_301$curiosity, levels=c("low","high"))
+summary(p3_301)
+
+# random sampling
+
+curiosity <- p3_301
+curiosity <- curiosity[, 3:9] %>% 
+  group_by(sub, trial, curiosity) %>%
+  summarise(sub = mean(sub)) 
+
+curiosity_count <- curiosity %>% 
+  mutate(x = 1) %>% group_by(sub, curiosity) %>% 
+  summarise(count = sum(x)) %>% 
+  pivot_wider(names_from = curiosity, values_from = count)
+
+sampling <- c()
+for (i in 1:47){
+  if (curiosity_count$low[i] < curiosity_count$high[i]){
+    sample_list <- srswor(curiosity_count$low[i], curiosity_count$high[i])
+  }
+  if (curiosity_count$high[i] < curiosity_count$low[i]){
+    sample_list <- srswor(curiosity_count$high[i], curiosity_count$low[i])
+  }
+  sampling <- c(sampling, sample_list)
+}
+
+sub.more_high <- curiosity_count$sub[curiosity_count$low < curiosity_count$high]
+sub.more_low <- curiosity_count$sub[curiosity_count$low > curiosity_count$high]
+
+curiosity <- curiosity %>% 
+  filter((curiosity == "high" & sub %in% sub.more_high)|(curiosity == "low" & sub %in% sub.more_low)) 
+curiosity$sampling <- sampling
+
+p3_301 <- left_join(p3_301, curiosity)
+p3_301$sampling <- factor(p3_301$sampling)
+summary(p3_301)
+
+# continue after 500 curiosity
+
+p3_301 <- filter(p3_301, sampling == 1 | is.na(sampling) == 1)
+summary(p3_301)
+
+# plot：6 curiosity levels，ERP
+p3_301 %>% group_by(Time,condition) %>% summarise(mean = mean(averagechannel)) %>% 
+  ggplot(aes(x=Time, y=mean, color=condition))+
+  stat_summary(geom="line") + theme_bw()
+
+# find peaked timepoint
+df_301 <- p3_301 %>% group_by(Time,curiosity) %>% summarise(mean = mean(averagechannel)) 
+
+# plot：2 curiosity levels，ERP
+df_301 %>% ggplot(aes(x=Time, y=mean, color=curiosity))+
+  # annotate("rect", xmin=277.344, xmax=324.219, ymin=-.8, ymax=.75, fill="black")+
+  # annotate("rect", xmin=171.875, xmax=207.031, ymin=-.8, ymax=.75, fill="black")+
+  stat_summary(geom="line", size=1.7)+
+  # geom_ribbon(aes(ymin=mean-sd(mean), ymax=mean+sd(mean)), fill="#FAEEF3", alpha=.2)+
+  scale_color_manual(values=c("#B39DDB","#311B92"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylab("amplitude")+theme_classic()
+
+# p3_301 %>% group_by(sub,Time,curiosity) %>%
+#   summarise(sub = sub, curiosity = curiosity, mean = mean(averagechannel)) %>%
+#   ggplot(aes(x=Time, y=mean, color=curiosity))+
+#   stat_summary(geom="line")+
+#   geom_ribbon(aes(ymin=mean-sd(mean), ymax=mean+sd(mean)), fill="#FAEEF3", alpha=.2)+
+#   scale_color_manual(values=c("#B39DDB","#311B92"))+
+#   geom_vline(xintercept=0, linetype="dashed")+
+#   theme_classic()+ facet_wrap(~sub)
+
+subavg_301 <- p3_301 %>% 
+  group_by(sub,Time,curiosity) %>% summarise(sub_mean = mean(averagechannel)) %>% 
+  group_by(Time,curiosity) %>% summarise(mean = mean(sub_mean), se = sd(sub_mean)/sqrt(47))
+
+subavg_301 %>% ggplot(aes(x=Time, y=mean))+
+  # annotate("rect", xmin=289.062, xmax=316.406, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=125, xmax=136.719, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=210.938, xmax=218.750, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=500, xmax=519.531, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=679.688, xmax=699.219, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=734.375, xmax=750, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=773.438, xmax=785.156, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  
+  annotate("rect", xmin=285.156, xmax=324.219, ymin=-.8, ymax=1.3, alpha=.6, fill="grey")+
+  # geom_ribbon(aes(ymin=mean-se, ymax=mean+se, fill = curiosity))+
+  stat_summary(aes(color=curiosity),geom="line", size=2)+
+  scale_color_manual(values=c("#B39DDB","#4500AD"))+
+  scale_fill_manual(values=c("#EBE9F8","#B8B1D8"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("301 by curiosity")+
+  theme_classic()
+
+# diff_301 <- p3_301 %>% 
+#   group_by(sub, Time) %>% summarise(diff = max(averagechannel)-min(averagechannel)) 
+# 
+# diff_301 %>% ggplot(aes(x = Time, y = diff, color=sub))+
+#   geom_line()+
+#   # stat_summary(geom="line", size=1.7)+
+#   scale_color_manual(values=c("#B39DDB","#311B92"))+
+#   geom_vline(xintercept=0, linetype="dashed")+
+#   ylim(-1,1) + ylab("Amplitude") + theme_classic()
+```
+
+## plot 301 beta and ERP with annotation
+```{r}
+timecourse <- p3_301[1:256,1]
+# length(timecourse)
+coef_301 <- data.frame()
+
+for (i in 1:length(timecourse)){
+# for (i in 116:142){
+  p3_301_timepoint <- filter(p3_301, Time == timecourse[i])
+  model.301 <- lmer(averagechannel ~ curiosity + (1 + curiosity | sub),
+                 data = p3_301_timepoint,
+                 control = lmerControl(optimizer = "bobyqa"))
+  ref <- 2
+  if (isSingular(model.301) == 1){
+    model.301 <- lmer(averagechannel ~ curiosity + (1 | sub), 
+                    data = p3_301_timepoint, 
+                    control = lmerControl(optimizer = "bobyqa"))
+    ref <- 1
+  }
+  if (isSingular(model.301) == 1){
+    model.301 <- lm(averagechannel ~ curiosity, data = p3_301_timepoint)
+    ref <- 0
+  }
+  
+  coef_new <- 
+    summary(model.301)$coefficients %>% 
+    data.frame() %>% 
+    mutate(time = timecourse[i],
+           rand_eff = ref)
+  coef_301 <- bind_rows(coef_301,coef_new)
+}
+
+slope_301 <- coef_301[seq(0,nrow(coef_301),2),] %>% 
+  mutate(sig = ifelse(Pr...t..>0.05, 0, 1))
+
+plist <- slope_301$Pr...t..
+plist_adj <- p.adjust(plist,  method ="BH") # FDR
+slope_301 <- slope_301 %>% mutate(corrected_sig = plist_adj)
+  
+
+slope_301 %>% 
+  ggplot(aes(x=time, y=Estimate))+
+  annotate("rect", xmin=281.250, xmax=316.406, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=242.188, xmax=257.812, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=171.874, xmax=207.031, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  geom_ribbon(aes(ymin=Estimate-Std..Error, ymax=Estimate+Std..Error), fill="#EBE9F8")+
+  geom_line(size = 1.8, col = "#311B92")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-0.3,0.65)+ xlab("Time")+ ylab("Beta")+
+  theme_classic()
+
+df_301 <- df_301 %>% left_join(subavg_301[,-3])
+
+#plot 301 erp with sig area
+p3_301 %>%
+  group_by(Time,curiosity) %>%
+  summarise(
+    mean = mean(averagechannel),
+    se = sd(averagechannel)/sqrt(47*135)
+  ) %>%
+  # filter(Time < 320 & Time > 280) %>%
+  
+# df_301 %>% 
+  ggplot(aes(x=Time, y=mean))+
+  annotate("rect", xmin=289.062, xmax=316.406, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=125, xmax=136.719, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=210.938, xmax=218.750, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=500, xmax=519.531, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=679.688, xmax=699.219, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=734.375, xmax=750, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  annotate("rect", xmin=773.438, xmax=785.156, ymin=-.9, ymax=1.1, alpha=.6, fill="gray")+
+  
+  # annotate("rect", xmin=285.156, xmax=324.219, ymin=-.8, ymax=1.3, alpha=.6, fill="grey")+
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se, fill = curiosity))+
+  stat_summary(aes(color=curiosity), geom="line", size=2)+
+  scale_color_manual(values=c("#B39DDB","#3E0689"))+
+  scale_fill_manual(values=c("#EBE9F8","#B8B1D8"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("301 by curiosity")+
+  theme_classic()
+```
+
+# 301 by condition
+## 301: txt -> csv
+```{r}
+# eegevent
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\301_18E\\event"))
+    
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}  
+  
+# eegdata
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\301_18E"))
+  
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}
+```
+
+## 301: 数据整理，添加被试编号和condition
+```{r}
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\301_18E"))
+  
+filelist.data <- list.files(pattern = ".csv")
+filelist.event <- list.files(".\\event", pattern = ".csv")
+  
+for (i in 1:length(filelist.data)){
+  eegdata <- read.csv(filelist.data[i])
+    
+  # read event
+  eegevent <- read.csv(paste0(".\\event\\", filelist.event[i])) %>% 
+    filter(binlabel != "") %>% 
+    select(type, epoch)
+  
+  list.condition <- list()
+  list.trial <- list()
+  
+  # eegevent$type -> list.condition
+  # eegevent$epoch -> list.trial
+  for (j in 1:length(eegevent$type)){
+    for (x in 1:256){
+      list.condition <- append(list.condition, eegevent[j,1])
+      list.trial <- append(list.trial, eegevent[j,2])
+    }
+  }
+  
+  # add columns (sub, condition, trial)
+  isub = substr(filelist.data[i], start=4, stop=6)
+  eegdata <- eegdata %>% 
+    # filter(Time>=250 & Time<=325) %>% 
+    mutate(
+      sub = isub,
+      condition = as.character(list.condition),
+      trial = as.character(list.trial)
+    )
+  write.csv(eegdata, paste0(".\\eegdata\\tc_", isub, "_peak301_",a,"E.csv"))
+}
+
+# 301 拼接所有被试数据
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\301_18E\\eegdata"))
+peakfile <- list.files()
+peakfile <- peakfile %>% lapply(read.csv)%>% bind_rows
+
+summary(peakfile)
+write.csv(peakfile, paste0("tc_301_byCondition.csv"))
+
+```
+
+## plot the 301 data & ERP by condition
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\301_18E\\eegdata")
+p3_301 <- read.csv("tc_301_byCuriosity.csv")
+
+summary(p3_301)
+
+p3_301 <- p3_301[, 3:7]
+p3_301 <- p3_301 %>% 
+  mutate(
+    condition = ifelse(condition=="9301", "Continuous", "Interrupted")
+  )
+summary(p3_301)
+
+# find peaked timepoint
+df_301 <- p3_301 %>% group_by(Time,condition) %>% summarise(mean = mean(averagechannel)) 
+
+# plot：2 conditions，ERP
+df_301 %>% ggplot(aes(x=Time, y=mean, color=condition))+
+  stat_summary(geom="line", size=1.7)+
+  scale_color_manual(values=c("#B39DDB","#311B92"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-1,1)+ylab("Power")+theme_classic()
+
+subavg_301 <- p3_301 %>% 
+  group_by(sub,Time,condition) %>% summarise(sub_mean = mean(averagechannel)) %>% 
+  group_by(Time,condition) %>% summarise(mean = mean(sub_mean), sd = sd(sub_mean))
+
+subavg_301 %>% ggplot(aes(x=Time, y=mean, color=condition))+
+  stat_summary(geom="line", size=1.7)+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), fill="#FAEEF3", alpha=.2)+
+  scale_color_manual(values=c("#B39DDB","#311B92"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-1,1) + ylab("Amplitude") + theme_classic()
+
+diff_301 <- p3_301 %>% 
+  group_by(sub, Time) %>% summarise(diff = max(averagechannel)-min(averagechannel)) 
+
+diff_301 %>% ggplot(aes(x = Time, y = diff, color=sub))+
+  geom_line()+
+  # stat_summary(geom="line", size=1.7)+
+  scale_color_manual(values=c("#B39DDB","#311B92"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-1,1) + ylab("Amplitude") + theme_classic()
+```
+
+## plot 301 beta and ERP with annotation
+```{r}
+timecourse <- p3_301[1:256,1]
+# length(timecourse)
+coef_301 <- data.frame()
+
+for (i in 1:length(timecourse)){
+  p3_301_timepoint <- filter(p3_301, Time == timecourse[i])
+  model.301 <- lmer(averagechannel ~ condition + (1 + condition | sub), 
+                 data = p3_301_timepoint, control = lmerControl(optimizer = "bobyqa"))
+  ref <- 2
+  if (isSingular(model.301) == 1){
+    model.301 <- lmer(averagechannel ~ condition + (1 | sub), 
+                      data = p3_301_timepoint, control = lmerControl(optimizer = "bobyqa"))
+    ref <- 1
+  }
+  if (isSingular(model.301) == 1){
+    model.301 <- lm(averagechannel ~ condition, data = p3_301_timepoint)
+    ref <- 0
+  }
+  
+  coef_new <- 
+    summary(model.301)$coefficients %>% 
+    data.frame() %>% 
+    mutate(time = timecourse[i],
+           rand_eff = ref)
+  coef_301 <- bind_rows(coef_301,coef_new)
+}
+
+slope_301 <- coef_301[seq(0,nrow(coef_301),2),] %>% 
+  mutate(sig = ifelse(Pr...t..>0.05, 0, 1))
+         
+slope_301 %>% 
+  ggplot(aes(x=time, y=Estimate))+
+  annotate("rect", xmin=281.250, xmax=316.406, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=242.188, xmax=257.812, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=171.874, xmax=207.031, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  geom_ribbon(aes(ymin=Estimate-Std..Error, ymax=Estimate+Std..Error), fill="#EBE9F8")+
+  geom_line(size = 1.8, col = "#311B92")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-0.3,0.65)+ xlab("Time")+ ylab("Beta")+
+  theme_classic()
+
+# plot 301 erp with sig area
+p3_301 %>% 
+  group_by(Time,condition) %>% 
+  summarise(
+    mean = mean(averagechannel),
+    se = sd(averagechannel)/sqrt(29)
+  ) %>% 
+  # filter(Time < 320 & Time > 280) %>% 
+  ggplot(aes(x=Time, y=mean, color=condition))+
+  annotate("rect", xmin=281.250, xmax=316.406, ymin=-0.8, ymax=0.8, alpha=.7, fill="gray")+
+  annotate("rect", xmin=242.188, xmax=257.812, ymin=-0.8, ymax=0.8, alpha=.7, fill="gray")+
+  annotate("rect", xmin=171.874, xmax=207.031, ymin=-0.8, ymax=0.8, alpha=.7, fill="gray")+
+  stat_summary(geom="line", size=1.5)+
+  scale_color_manual(values=c("#4500AD","#BFB2FF"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylim(-0.8,0.8)+ ylab("Amplitude")+
+  theme_classic()
+```
+
+# 500 by curiosity
+
+# 500: 数据整理，添加被试编号和curiosity rating）
+```{r}
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\500_21E"))
+filelist.data <- list.files(pattern = ".csv")
+filelist.event <- list.files(".\\event", pattern = ".csv")
+
+for (i in 1:length(filelist.data)){
+  eegdata <- read.csv(filelist.data[i])
+  
+  # read event
+  eegevent <- read.csv(paste0(".\\event\\", filelist.event[i]))
+  eegevent <- eegevent %>%
+    filter(binlabel != "") %>% 
+    select(type, epoch)
+  
+  list.condition <- list()
+  list.trial <- list()
+  
+  # eegevent$type -> list.condition
+  # eegevent$epoch -> list.trial
+  for (j in 1:length(eegevent$type)){
+    for (x in 1:256){
+      list.condition <- append(list.condition, eegevent[j,1])
+      list.trial <- append(list.trial, eegevent[j,2])
+    }
+  }
+  # add columns (sub, condition, trial)
+  isub = substr(filelist.data[i], start=4, stop=6)
+  eegdata <- eegdata %>% 
+    # filter(Time>=250 & Time<=325) %>% 
+    mutate(
+      sub = isub,
+      condition = as.character(list.condition),
+      trial = as.character(list.trial)
+    )
+  write.csv(eegdata, paste0(".\\eegdata\\tc_", isub, "_peak500_21E.csv"))
+}
+
+# 500 拼接所有被试数据
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\500_21E\\eegdata"))
+peakfile <- list.files()
+peakfile <- peakfile %>% lapply(read.csv) %>% bind_rows
+
+summary(peakfile)
+write.csv(peakfile, paste0("tc_500_byCuriosity.csv"))
+```
+
+## plot 500 data and ERP by curiosity
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_curiosity\\export_eegdata\\500_21E\\eegdata")
+p3_500 <- read.csv("tc_500_byCuriosity.csv")
+summary(p3_500)
+
+p3_500 <- p3_500[, 3:7]
+p3_500 <- p3_500 %>% filter(condition != "B7(500)")
+p3_500$condition <- factor(p3_500$condition, levels=c("B1(7501)","B2(7502)","B3(7503)","B4(7504)","B5(7505)","B6(7506)"))
+p3_500 <- p3_500 %>%
+  mutate(curiosity = ifelse(condition=="B1(7501)"|condition=="B2(7502)"|condition=="B3(7503)", "low", "high"))
+p3_500$curiosity <- factor(p3_500$curiosity, levels=c("high","low"))
+summary(p3_500)
+
+
+p3_500$curiosity <- p3_301$curiosity
+p3_500$curating <- p3_301$curating
+p3_500$mean_curating <- p3_301$mean_curating
+p3_500$median_curating <- p3_301$median_curating
+
+
+summary(p3_500)
+summary(p3_301)
+
+# curiosity <- p3_500
+# curiosity <- curiosity[, 3:6] %>%
+#   group_by(sub, trial, curiosity) %>%
+#   summarise(sub = mean(sub))
+# 
+# curiosity_count <- curiosity %>%
+#   mutate(x = 1) %>% group_by(sub, curiosity) %>%
+#   summarise(count = sum(x)) %>%
+#   pivot_wider(names_from = curiosity, values_from = count)
+# 
+# sampling <- c()
+# for (i in 1:47){
+#   if (curiosity_count$low[i] < curiosity_count$high[i]){
+#     sample_list <- srswor(curiosity_count$low[i], curiosity_count$high[i])
+#   }
+#   if (curiosity_count$high[i] < curiosity_count$low[i]){
+#     sample_list <- srswor(curiosity_count$high[i], curiosity_count$low[i])
+#   }
+#   sampling <- c(sampling, sample_list)
+# }
+# 
+# sub.more_high <- curiosity_count$sub[curiosity_count$low < curiosity_count$high]
+# sub.more_low <- curiosity_count$sub[curiosity_count$low > curiosity_count$high]
+# 
+# curiosity <- curiosity %>%
+#   filter((curiosity == "high" & sub %in% sub.more_high)|(curiosity == "low" & sub %in% sub.more_low))
+# curiosity$sampling <- sampling
+# 
+# p3_500 <- left_join(p3_500, curiosity)
+# p3_500$sampling <- factor(p3_500$sampling)
+# summary(p3_500)
+
+p3_500 <- filter(p3_500, sampling == 1 | is.na(sampling) == 1)
+summary(p3_500)
+
+# find 500 peaked timepoint: 320ms
+df_500 <- p3_500 %>% group_by(Time,curiosity) %>% summarise(mean = mean(averagechannel)) 
+
+# plot: 500 ERP by curiosity
+df_500 %>% ggplot(aes(x=Time, y=mean, color=curiosity))+
+  stat_summary(geom="line", size=1.8)+
+  scale_color_manual(values=c("#CE75AD","#7A0177"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylab("Power")+theme_classic()
+
+# p3_500 %>% group_by(sub,Time,curiosity) %>%
+#   summarise(sub = sub, curiosity = curiosity, mean = mean(averagechannel))%>% 
+#   ggplot(aes(x=Time, y=mean, color=curiosity))+
+#   stat_summary(geom="line")+
+#   scale_color_manual(values=c("#CE75AD","#7A0177"))+
+#   geom_vline(xintercept=0, linetype="dashed")+
+#   ylab("Power")+theme_classic()+
+#   facet_wrap(~sub)
+```
+
+## plot 500 beta and ERP with annotation
+```{r}
+timecourse <- p3_500[1:256,1]
+# length(timecourse)
+coef_500 <- data.frame()
+
+for (i in 1:length(timecourse)){
+# for (i in 116:142){
+  p3_500_timepoint <- filter(p3_500, Time == timecourse[i])
+  model.500 <- lmer(averagechannel ~ curiosity + (1 + curiosity | sub), 
+                 data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+  ref <- 2
+  if (isSingular(model.500) == 1){
+    model.500 <- lmer(averagechannel ~ curiosity + (1 | sub), 
+                      data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+    ref <- 1
+  }
+  if (isSingular(model.500) == 1){
+    model.500 <- lm(averagechannel ~ curiosity, data = p3_500_timepoint)
+    ref <- 0
+  }
+  
+  coef_new <- 
+    summary(model.500)$coefficients %>% 
+    data.frame() %>% 
+    mutate(time = timecourse[i],
+           rand_eff = ref)
+  coef_500 <- bind_rows(coef_500,coef_new)
+}
+
+slope_500 <- coef_500[seq(0,nrow(coef_500),2),] %>% 
+  mutate(sig = ifelse(Pr...t..>0.05, 0, 1))
+
+
+plist <- slope_500$Pr...t..
+plist_adj <- p.adjust(plist,  method ="BH") # FDR
+slope_500 <- slope_500 %>% mutate(corrected_sig = plist_adj)
+         
+slope_500 %>% 
+  ggplot(aes(x=time, y=Estimate))+
+  annotate("rect", xmin=281.250, xmax=316.406, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=242.188, xmax=257.812, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+
+  annotate("rect", xmin=171.874, xmax=207.031, ymin=-.3, ymax=.65, alpha=.7, fill="gray")+ 
+  geom_ribbon(aes(ymin=Estimate-Std..Error, ymax=Estimate+Std..Error), fill="#EBE9F8")+
+  geom_line(size = 1.8, col = "#311B92")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-0.3,0.65)+ xlab("Time")+ ylab("Beta")+
+  theme_classic()
+  # theme_test()
+
+# plot 500 erp with sig area
+p3_500 %>% 
+  group_by(Time,curiosity) %>% 
+  summarise(
+    mean = mean(averagechannel),
+    se = sd(averagechannel)/sqrt(29)
+  ) %>% 
+  # filter(Time < 320 & Time > 280) %>% 
+  ggplot(aes(x=Time, y=mean, color=curiosity))+
+  # annotate("rect", xmin=-70.312, xmax=-31.250, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=27.344, xmax=58.594, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=121.094, xmax=128.906, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=167.969, xmax=199.219, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=257.812, xmax=363.281, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=667.969, xmax=710.938, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=765.625, xmax=789.062, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  
+  annotate("rect", xmin=167.969, xmax=199.219, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=261.719, xmax=281.250, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=296.875, xmax=324.219, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=332.031, xmax=355.469, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  stat_summary(geom="line", size=2)+
+  scale_color_manual(values=c("#B39DDB","#4500AD"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("500 by curiosity")+
+  theme_classic()
+
+subavg_500 <- p3_500 %>% 
+  group_by(sub,Time,curiosity) %>% summarise(sub_mean = mean(averagechannel)) %>% 
+  group_by(Time,curiosity) %>% summarise(mean = mean(sub_mean), se = sd(sub_mean)/sqrt(47))
+
+subavg_500 %>% ggplot(aes(x=Time, y=mean))+
+  annotate("rect", xmin=167.969, xmax=199.219, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=261.719, xmax=281.250, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=296.875, xmax=324.219, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  annotate("rect", xmin=332.031, xmax=355.469, ymin=-1.1, ymax=1.55, alpha=.6, fill="gray")+
+  # geom_ribbon(aes(ymin=mean-se, ymax=mean+se, fill = curiosity))+
+  stat_summary(aes(color=curiosity),geom="line", size=2)+
+  scale_color_manual(values=c("#B39DDB","#4500AD"))+
+  scale_fill_manual(values=c("#EBE9F8","#B8B1D8"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("301 by curiosity")+
+  theme_classic()
+```
+
+# 500 by surprise
+
+
+# 500: 数据整理，添加被试编号和surprise rating）
+```{r}
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_surprise\\export_eegdata\\500_21E"))
+filelist.data <- list.files(pattern = ".csv")
+filelist.event <- list.files(".\\event", pattern = ".csv")
+
+for (i in 1:length(filelist.data)){
+  eegdata <- read.csv(filelist.data[i])
+  
+  # read event
+  eegevent <- read.csv(paste0(".\\event\\", filelist.event[i]))
+  eegevent <- eegevent %>%
+    filter(binlabel != "") %>% 
+    select(type, epoch)
+  
+  list.condition <- list()
+  list.trial <- list()
+  
+  # eegevent$type -> list.condition
+  # eegevent$epoch -> list.trial
+  for (j in 1:length(eegevent$type)){
+    for (x in 1:256){
+      list.condition <- append(list.condition, eegevent[j,1])
+      list.trial <- append(list.trial, eegevent[j,2])
+    }
+  }
+  # add columns (sub, condition, trial)
+  isub = substr(filelist.data[i], start=4, stop=6)
+  eegdata <- eegdata %>% 
+    # filter(Time>=250 & Time<=325) %>% 
+    mutate(
+      sub = isub,
+      condition = as.character(list.condition),
+      trial = as.character(list.trial)
+    )
+  write.csv(eegdata, paste0(".\\eegdata\\tc_", isub, "_peak500_21E.csv"))
+}
+
+# 500 拼接所有被试数据
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_surprise\\export_eegdata\\500_21E\\eegdata"))
+peakfile <- list.files()
+peakfile <- peakfile %>% lapply(read.csv) %>% bind_rows
+
+summary(peakfile)
+write.csv(peakfile, paste0("tc_500_bySurprise.csv"))
+```
+
+## plot 500 data and ERP by surprise
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_surprise\\export_eegdata\\500_21E\\eegdata")
+p3_500 <- read.csv("tc_500_bySurprise.csv")
+p3_500 <- p3_500[, 3:7]
+p3_500 <- p3_500 %>% filter(condition != "B7(500)")
+p3_500$condition <- factor(p3_500$condition,levels=c("B1(8501)","B2(8502)","B3(8503)","B4(8504)","B5(8505)","B6(8506)"))
+# p3_500 <- p3_500 %>%
+#   mutate(surprise = ifelse(condition=="B1(8501)"|condition=="B2(8502)"|condition=="B3(8503)", "low", "high"))
+# p3_500$surprise <- factor(p3_500$surprise, levels=c("high","low"))
+# summary(p3_500)
+
+p3_500 <- p3_500 %>% mutate(surating = as.numeric(substr(condition,7,7)))
+summary(p3_500)
+surprise_smy <- p3_500 %>% group_by(sub) %>%
+  summarise(
+    mean_surating = mean(surating),
+    median_surating = median(surating)
+  )
+
+p3_500 <- left_join(p3_500, surprise_smy)
+p3_500 <- p3_500 %>% mutate(surprise = ifelse(surating > mean_surating, "high", "low"))
+# p3_500 <- p3_500 %>% mutate(surprise = ifelse(surating > median_surating, "high", "low"))
+# p3_500 <- p3_500 %>% mutate(surprise = ifelse(surating >= median_surating, "high", "low"))
+p3_500$surprise <- factor(p3_500$surprise, levels=c("high","low"))
+summary(p3_500)
+
+# random sampling
+
+surprise <- p3_500
+surprise <- surprise[, 3:6] %>%
+  group_by(sub, trial, surprise) %>%
+  summarise(sub = mean(sub))
+
+surprise_count <- surprise %>%
+  mutate(x = 1) %>% group_by(sub, surprise) %>%
+  summarise(count = sum(x)) %>%
+  pivot_wider(names_from = surprise, values_from = count)
+
+sampling <- c()
+for (i in 1:47){
+  if (surprise_count$low[i] < surprise_count$high[i]){
+    sample_list <- srswor(surprise_count$low[i], surprise_count$high[i])
+  }
+  if (surprise_count$high[i] < surprise_count$low[i]){
+    sample_list <- srswor(surprise_count$high[i], surprise_count$low[i])
+  }
+  sampling <- c(sampling, sample_list)
+}
+
+sub.more_high <- surprise_count$sub[surprise_count$low < surprise_count$high]
+sub.more_low <- surprise_count$sub[surprise_count$low > surprise_count$high]
+
+surprise <- surprise %>%
+  filter((surprise == "high" & sub %in% sub.more_high)|(surprise == "low" & sub %in% sub.more_low))
+surprise$sampling <- sampling
+
+p3_500 <- left_join(p3_500, surprise)
+p3_500$sampling <- factor(p3_500$sampling)
+summary(p3_500)
+
+p3_500 <- filter(p3_500, sampling == 1 | is.na(sampling) == 1)
+summary(p3_500)
+
+
+
+# p3_500 %>% ggplot(aes(x=Time, y=averagechannel, color=condition))+
+#   stat_summary(geom="line", size=1)+
+#   geom_vline(xintercept=0, linetype="dashed")+
+#   ylab("Power")+theme_classic()
+
+# find 500 peaked timepoint: 320ms
+df_500 <- p3_500 %>% group_by(Time,surprise) %>% summarise(mean = mean(averagechannel)) 
+
+# plot: 500 ERP by surprise
+df_500 %>% ggplot(aes(x=Time, y=mean, color=surprise))+
+  stat_summary(geom="line", size=1.8)+
+  scale_color_manual(values=c("#93D1A0","#026329"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylab("Power")+theme_classic()
+
+
+# # find 500 peaked timepoint
+# df_500 <- p3_500 %>% group_by(Time,con_int) %>% summarise(mean = mean(averagechannel)) 
+# 
+# # plot: 500 ERP by con_int
+# df_500 %>% ggplot(aes(x=Time, y=mean, color=con_int))+
+#   stat_summary(geom="line", size=1.8)+
+#   scale_color_manual(values=c("#7A0177","#CE75AD"))+
+#   geom_vline(xintercept=0, linetype="dashed")+
+#   ylab("Power")+theme_classic()
+```
+
+## plot 500 beta and ERP with annotation
+```{r}
+timecourse <- p3_500[1:256,1]
+# length(timecourse)
+coef_500 <- data.frame()
+
+for (i in 1:length(timecourse)){
+  p3_500_timepoint <- filter(p3_500, Time == timecourse[i])
+  model.500 <- lmer(averagechannel ~ surprise + (1 + surprise | sub), 
+                 data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+  ref <- 2
+  if (isSingular(model.500) == 1){
+    model.500 <- lmer(averagechannel ~ surprise + (1 | sub), 
+                      data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+    ref <- 1
+  }
+  if (isSingular(model.500) == 1){
+    model.500 <- lm(averagechannel ~ surprise, data = p3_500_timepoint)
+    ref <- 0
+  }
+  
+  coef_new <- 
+    summary(model.500)$coefficients %>% 
+    data.frame() %>% 
+    mutate(time = timecourse[i],
+           rand_eff = ref)
+  coef_500 <- bind_rows(coef_500,coef_new)
+}
+
+slope_500 <- coef_500[seq(0,nrow(coef_500),2),] %>% 
+  mutate(sig = ifelse(Pr...t..>0.05, 0, 1))
+
+plist <- slope_500$Pr...t..
+plist_adj <- p.adjust(plist,  method ="BH") # FDR
+slope_500 <- slope_500 %>% mutate(corrected_sig = plist_adj)
+         
+slope_500 %>% 
+  ggplot(aes(x=time, y=Estimate))+
+  geom_ribbon(aes(ymin=Estimate-Std..Error, ymax=Estimate+Std..Error), fill="#EBE9F8")+
+  geom_line(size = 1.8, col = "#311B92")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-0.3,0.65)+ xlab("Time")+ ylab("Beta")+
+  theme_classic()
+  # theme_test()
+
+# plot 500 erp with sig area
+p3_500 %>% 
+  group_by(Time,surprise) %>% 
+  summarise(
+    mean = mean(averagechannel),
+    se = sd(averagechannel)/sqrt(29)
+  ) %>% 
+  # filter(Time < 320 & Time > 280) %>% 
+  ggplot(aes(x=Time, y=mean, color=surprise))+
+  # annotate("rect", xmin=-144.531, xmax=-132.812, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+
+  # annotate("rect", xmin=-70.312, xmax=-46.875, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+
+  # annotate("rect", xmin=15.625, xmax=31.25, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+
+  # annotate("rect", xmin=164.062, xmax=207.031, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+
+  # annotate("rect", xmin=265.625, xmax=441.406, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+
+  # annotate("rect", xmin=457.031, xmax=562.5, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+  
+  # annotate("rect", xmin=589.844, xmax=621.094, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+ 
+  # annotate("rect", xmin=792.969, xmax=796.875, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+ 
+  # annotate("rect", xmin=691.406, xmax=773.438, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+ 
+  
+  annotate("rect", xmin=-164.062, xmax=-128.906, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+  
+  annotate("rect", xmin=257.812, xmax=414.062, ymin=-2, ymax=1.2, alpha=.7, fill="gray")+ 
+  
+  stat_summary(geom="line", size=2)+
+  scale_color_manual(values=c("#93D1A0","#026329"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("500 by surprise")+
+  theme_classic()
+
+subavg_500 <- p3_500 %>% 
+  group_by(sub,Time,surprise) %>% summarise(sub_mean = mean(averagechannel)) %>% 
+  group_by(Time,surprise) %>% summarise(mean = mean(sub_mean), se = sd(sub_mean)/sqrt(47))
+
+subavg_500 %>% ggplot(aes(x=Time, y=mean))+
+  # annotate("rect", xmin=-164.062, xmax=-128.906, ymin=-2, ymax=1.2, alpha=.6, fill="gray")+  
+  # annotate("rect", xmin=257.812, xmax=414.062, ymin=-2, ymax=1.2, alpha=.6, fill="gray")+ 
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se, fill = surprise))+
+  stat_summary(aes(color=surprise),geom="line", size=2)+
+  scale_color_manual(values=c("#CE75AD","#7A0177"))+
+  scale_fill_manual(values=c("#FFE9F5","#E2BAD5"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude")+ggtitle("500 by surprise")+
+  theme_classic()
+```
+
+
+# 500 by condition
+
+## 500: txt -> csv
+```{r}
+# eegevent
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\500_21E\\event"))
+
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}  
+
+# eegdata
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\500_21E"))
+
+filelist <- list.files(pattern = ".txt")
+for (i in 1:length(filelist)){
+  input <- filelist[i]
+  output <- paste0(gsub("\\.txt$", "", input), ".csv")
+  print(paste("Processing the file:", input))
+  data = read.delim(input, header = TRUE)
+  write.table(data, file=output, sep=",", col.names=TRUE, row.names=FALSE)
+}
+```
+
+# 500: 数据整理，添加被试编号和conditions
+```{r}
+filelist.data <- list.files(pattern = ".csv")
+filelist.event <- list.files(".\\event", pattern = ".csv")
+
+for (i in 1:length(filelist.data)){
+  eegdata <- read.csv(filelist.data[i])
+  
+  # read event
+  eegevent <- read.csv(paste0(".\\event\\", filelist.event[i]))
+  eegevent <- eegevent %>%
+    filter(binlabel != "") %>% 
+    select(type, epoch)
+  
+  list.condition <- list()
+  list.trial <- list()
+  
+  # eegevent$type -> list.condition
+  # eegevent$epoch -> list.trial
+  for (j in 1:length(eegevent$type)){
+    for (x in 1:256){
+      list.condition <- append(list.condition, eegevent[j,1])
+      list.trial <- append(list.trial, eegevent[j,2])
+    }
+  }
+  # add columns (sub, condition, trial)
+  isub = substr(filelist.data[i], start=4, stop=6)
+  eegdata <- eegdata %>% 
+    # filter(Time>=250 & Time<=325) %>% 
+    mutate(
+      sub = isub,
+      condition = as.character(list.condition),
+      trial = as.character(list.trial)
+    )
+  write.csv(eegdata, paste0(".\\eegdata\\tc_", isub, "_peak500_21E.csv"))
+}
+
+# 500 拼接所有被试数据
+setwd(paste0("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\500_21E\\eegdata"))
+peakfile <- list.files()
+peakfile <- peakfile %>% lapply(read.csv) %>% bind_rows
+
+summary(peakfile)
+write.csv(peakfile, paste0("tc_500_byCondition.csv"))
+```
+
+## plot the 500 data & ERP by condition
+```{r}
+setwd("C:\\Users\\xjl19\\Desktop\\CuriosityEGI\\Task_bins_condition\\export_eegdata\\500_21E\\eegdata")
+p3_500 <- read.csv("tc_500_byCondition.csv")
+condition <- p3_500
+summary(p3_500)
+
+p3_500 <- p3_500[, 3:7]
+summary(p3_500)
+
+# random sampling 
+summary(condition)
+
+condition <- condition[, 5:7] %>% 
+  group_by(sub, trial, condition) %>%
+  summarise(sub = mean(sub)) 
+
+condition_count <- condition %>% 
+  mutate(x = 1) %>% group_by(sub, condition) %>% 
+  summarise(count = sum(x)) %>% 
+  pivot_wider(names_from = condition, values_from = count)
+
+sampling <- c()
+for (i in 1:47){
+  sample_list <- srswor(condition_count$`B2(500)`[i],condition_count$`B1(9500)`[i])
+  sampling <- c(sampling, sample_list)
+}
+
+condition <- condition %>% filter(condition == "B1(9500)")
+condition$sampling <- sampling
+
+p3_500 <- left_join(p3_500, condition)
+p3_500$sampling <- factor(p3_500$sampling)
+p3_500$condition <- factor(p3_500$condition)
+summary(p3_500)
+
+p3_500 <- filter(p3_500, sampling == 1 | is.na(sampling) == 1)
+
+# find 500 peaked timepoint: 320ms
+df_500 <- p3_500 %>% group_by(Time,condition) %>% summarise(mean = mean(averagechannel)) 
+
+# plot: 500 ERP by condition
+df_500 %>% ggplot(aes(x=Time, y=mean, color=condition))+
+  stat_summary(geom="line", size=1.8)+
+  scale_color_manual(values=c("#CE75AD","#7A0177"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylab("Power")+theme_classic()
+```
+
+## plot 500 beta and ERP with annotation
+```{r}
+timecourse <- p3_500[1:256,1]
+coef_500 <- data.frame()
+
+for (i in 1:length(timecourse)){
+  p3_500_timepoint <- filter(p3_500, Time == timecourse[i])
+  model.500 <- lmer(averagechannel ~ condition + (1 + condition | sub), 
+                    data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+  ref <- 2
+  if (isSingular(model.500) == 1){
+    model.500 <- lmer(averagechannel ~ condition + (1 | sub), 
+                      data = p3_500_timepoint, control = lmerControl(optimizer = "bobyqa"))
+    ref <- 1
+  }
+  if (isSingular(model.500) == 1){
+    model.500 <- lm(averagechannel ~ condition, data = p3_500_timepoint)
+    ref <- 0
+  }
+  
+  coef_new <- 
+    summary(model.500)$coefficients %>% data.frame() %>% 
+    mutate(time = timecourse[i],
+           rand_eff = ref)
+  coef_500 <- bind_rows(coef_500,coef_new)
+}
+
+slope_500 <- coef_500[seq(0,nrow(coef_500),2),] %>% mutate(sig = ifelse(Pr...t..>0.05, 0, 1))
+
+plist <- slope_500$Pr...t..
+plist_adj <- p.adjust(plist,  method ="BH") # FDR
+slope_500 <- slope_500 %>% mutate(corrected_sig = plist_adj)
+
+slope_500 %>% 
+  ggplot(aes(x=time, y=Estimate))+
+  annotate("rect", xmin=285.156, xmax=421.875, ymin=-.6, ymax=.75, alpha=.6, fill="gray")+
+  annotate("rect", xmin=582.031, xmax=796.875, ymin=-.6, ymax=.75, alpha=.6, fill="gray")+
+  geom_ribbon(aes(ymin=Estimate-Std..Error, ymax=Estimate+Std..Error), fill="#FAEEF3")+
+  geom_line(size = 1.7, col = "#7A0177")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  geom_vline(xintercept=0, linetype="dashed")+
+  ylim(-0.6,0.75) + xlab("Time") + ylab("Beta") + theme_classic()
+# theme_test()
+
+# plot 500 erp with sig area
+p3_500$condition <- factor(p3_500$condition)
+p3_500 %>% group_by(Time,condition) %>% 
+  summarise(mean = mean(averagechannel), se = sd(averagechannel)/sqrt(29)) %>% 
+  ggplot(aes(x=Time, y=mean, color=condition))+
+  # annotate("rect", xmin=285.156, xmax=421.875, ymin=-1.2, ymax=1.2, alpha=.6, fill="gray")+
+  # annotate("rect", xmin=582.031, xmax=796.875, ymin=-1.2, ymax=1.2, alpha=.6, fill="gray")+
+  stat_summary(geom="line", size=2)+
+  scale_color_manual(values=c("#90005D","#E380B2"))+
+  geom_vline(xintercept=0, linetype="dashed")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  ylab("Amplitude") + ggtitle("500 by condition")+
+  theme_classic()
+```
+
