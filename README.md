@@ -4,9 +4,12 @@
 
 > From [Affective, Neuroscience, and Decision-making Lab](https://andlab-um.com)
 
-Code for [[EEG study of curiosity]] preprocessing and preliminary analysis, accompanying with the following preprint:
-
-Study led by Xianqing Liu and Qi Huang
+Code for [[EEG study of curiosity]] preprocessing and preliminary analysis, accompanied with the following preprint:
 
 
 ## Description
+
+## Summary
+
+
+## path and code
