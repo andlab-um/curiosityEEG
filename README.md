@@ -10,6 +10,7 @@ Code for [[EEG study of curiosity]] preprocessing and preliminary analysis, acco
 ## Description
 
 ## Summary
+![Summary images](summary_curiosity-v2.png)
 
 
 ## path and code
