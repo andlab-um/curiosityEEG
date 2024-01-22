@@ -6,7 +6,8 @@
 
 ![Summary images](summary_curiosity-v2.png)
 
-Code for [[EEG study of curiosity]] preprocessing and preliminary analysis, accompanied with the following preprint:
+## Description 
+Code for "From induction to relief: the temporal dynamics of curiosity in the human brain", preprocessing and preliminary analysis, accompanied with the following preprint
 
 
 ## Abstract
