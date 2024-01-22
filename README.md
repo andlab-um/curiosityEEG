@@ -18,5 +18,7 @@ Following the blurred picture presentation, participants engaged in a self-evalu
 In intrupped trials, the blurred picture will abruptly turned clear, prompting an immediate response. Participants then proceeded to the self-evaluation phase. The timing of these interruptions was pseudo-randomized. Participants consistently rated their curiosity and confidence, even in interrupted trials, based on their feelings after seeing the clear picture. In the contionus trials, participants will see the gradually deblurring picture. The purpose of interrupted trials is to observe participants' neural responses and behavioral reactions when faced with sudden changes in circumstances. This design helps researchers gain insights into the neural foundations of curiosity, particularly in response to the unknown or unexpected events. 
 
 ## History 
+01/14/2023- Initaion date
 
-## path and code
+## Path and code
+The Behavioral Result is in the curi_behav_lxq.csv. The EGI data will be uploading soon.
